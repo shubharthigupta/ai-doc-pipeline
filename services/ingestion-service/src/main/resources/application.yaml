@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ingestion-service
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/docpipeline
+    username: admin
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+
+server:
+  port: 8081
+
+aws:
+  s3:
+    endpoint: http://127.0.0.1:9002
+    bucket-name: doc-pipeline-local
+    access-key: minioadmin
+    secret-key: minioadmin
+    region: us-east-1
+
+kafka:
+  topics:
+    document-uploaded: document.uploaded
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://127.0.0.1:4317
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.springframework.jdbc: DEBUG
+    com.zaxxer.hikari: DEBUG
