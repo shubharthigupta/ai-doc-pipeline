@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: extraction-service
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/docpipeline
+    username: admin
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: extraction-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.aidocpipeline.*"
+        spring.json.value.default.type: com.aidocpipeline.extractionservice.event.DocumentUploadedEvent
+        spring.json.use.type.headers: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 8082
+
+aws:
+  s3:
+    endpoint: http://127.0.0.1:9002
+    bucket-name: doc-pipeline-local
+    access-key: minioadmin
+    secret-key: minioadmin
+    region: us-east-1
+
+kafka:
+  topics:
+    document-uploaded: document.uploaded
+    document-extracted: document.extracted
+
+chunking:
+  max-chunk-size: 500
+  overlap: 50
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://127.0.0.1:4318/v1/traces
