@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: query-service
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/docpipeline
+    username: admin
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+server:
+  port: 8084
+
+aws:
+  region: us-east-1
+  bedrock:
+    model-id: anthropic.claude-3-5-sonnet-20241022-v2:0
+    mock-enabled: true
+
+rag:
+  top-k: 5
+  similarity-threshold: 0.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 0.0
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
