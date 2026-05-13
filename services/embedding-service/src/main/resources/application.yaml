@@ -26,6 +26,13 @@ spring:
         spring.json.value.default.type: com.aidocpipeline.embeddingservice.event.DocumentExtractedEvent
         spring.json.use.type.headers: false
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_TDerfm5Q4
+          jwk-set-uri: https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_TDerfm5Q4/.well-known/jwks.json
+
 server:
   port: 8083
 
