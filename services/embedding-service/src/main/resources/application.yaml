@@ -37,8 +37,9 @@ server:
   port: 8083
 
 aws:
-  region: us-east-1
+  region: ap-south-1
   bedrock:
+    model-id: amazon.titan-embed-text-v2:0
     mock-enabled: true
 
 kafka:

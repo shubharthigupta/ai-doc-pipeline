@@ -53,16 +53,8 @@ management:
       show-details: always
   tracing:
     sampling:
-      probability: 1.0
-  otlp:
-    tracing:
-      endpoint: http://127.0.0.1:4318/v1/traces
+      probability: 0.0
 
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
-
-logging:
-  level:
-    org.springframework.jdbc: DEBUG
-    com.zaxxer.hikari: DEBUG

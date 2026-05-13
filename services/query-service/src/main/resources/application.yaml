@@ -24,9 +24,9 @@ server:
   port: 8084
 
 aws:
-  region: us-east-1
+  region: ap-south-1
   bedrock:
-    model-id: anthropic.claude-3-5-sonnet-20241022-v2:0
+    model-id: apac.anthropic.claude-3-5-sonnet-20240620-v1:0
     mock-enabled: true
 
 rag:
