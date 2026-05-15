@@ -6,6 +6,7 @@ import com.aidocpipeline.queryservice.dto.QueryResponse;
 import com.aidocpipeline.queryservice.entity.Document;
 import com.aidocpipeline.queryservice.repository.DocumentChunkRepository;
 import com.aidocpipeline.queryservice.repository.DocumentRepository;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,9 @@ public class QueryService {
     @Value("${rag.similarity-threshold:0.0}")
     private double similarityThreshold;
 
+    // Add to class fields
+    private final QueryMetrics metrics;
+
     /**
      * Main RAG pipeline — called when user submits a question.
      *
@@ -44,6 +48,9 @@ public class QueryService {
     public QueryResponse query(QueryRequest request) {
         long startTime = System.currentTimeMillis();
         log.info("Processing query: {}", request.getQuestion());
+
+        Timer.Sample timerSample = metrics.startQueryTimer();
+        metrics.incrementQueries();
 
         // Step 1: Convert question to vector
         float[] queryVector = embeddingService.embedQuery(request.getQuestion());
@@ -75,6 +82,12 @@ public class QueryService {
 
         long processingTime = System.currentTimeMillis() - startTime;
         log.info("Query processed in {}ms. Citations: {}", processingTime, citations.size());
+
+        if (citations.isEmpty()) {
+            metrics.incrementNoResults();
+        }
+        metrics.recordCitations(citations.size());
+        metrics.stopQueryTimer(timerSample);
 
         // Step 5: Return complete response
         return QueryResponse.builder()

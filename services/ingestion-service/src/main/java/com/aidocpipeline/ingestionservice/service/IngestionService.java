@@ -5,6 +5,7 @@ import com.aidocpipeline.ingestionservice.dto.DocumentUploadResponse;
 import com.aidocpipeline.ingestionservice.entity.Document;
 import com.aidocpipeline.ingestionservice.event.DocumentUploadedEvent;
 import com.aidocpipeline.ingestionservice.repository.DocumentRepository;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,9 @@ public class IngestionService {
     @Value("${kafka.topics.document-uploaded}")
     private String documentUploadedTopic;
 
+    // Add to the class fields
+    private final IngestionMetrics metrics;
+
     /**
      * Main method — called when user uploads a file.
      * Step 1: Validate
@@ -39,16 +43,24 @@ public class IngestionService {
      * Step 5: Return response
      */
     public DocumentUploadResponse ingestDocument(MultipartFile file, String tenantId) {
-        log.info("Starting ingestion for file: {}, tenant: {}", file.getOriginalFilename(), tenantId);
+        log.info("Starting ingestion for file: {}, tenant: {}",
+                file.getOriginalFilename(), tenantId);
 
-        // Step 1: Validate file
-        validateFile(file);
+        // Validate FIRST — before starting timer or touching any external service
+        // This way validation failures are fast and don't need metrics
+        try {
+            validateFile(file);
+        } catch (IllegalArgumentException e) {
+            metrics.incrementValidationFailed();
+            throw e;
+        }
+
+        // Only start timer after validation passes
+        Timer.Sample timerSample = metrics.startUploadTimer();
 
         try {
-            // Step 2: Upload to S3/MinIO
             String s3Key = s3StorageService.uploadFile(file, tenantId);
 
-            // Step 3: Save metadata to PostgreSQL
             Document document = Document.builder()
                     .fileName(file.getOriginalFilename())
                     .s3Key(s3Key)
@@ -60,7 +72,6 @@ public class IngestionService {
             Document saved = documentRepository.save(document);
             log.info("Document saved to DB with ID: {}", saved.getId());
 
-            // Step 4: Publish event to Kafka
             DocumentUploadedEvent event = DocumentUploadedEvent.builder()
                     .documentId(saved.getId())
                     .s3Bucket(bucketName)
@@ -71,10 +82,13 @@ public class IngestionService {
                     .uploadedAt(saved.getUploadedAt())
                     .build();
 
-            kafkaTemplate.send(documentUploadedTopic, saved.getId().toString(), event);
+            kafkaTemplate.send(documentUploadedTopic,
+                    saved.getId().toString(), event);
             log.info("Event published to Kafka topic: {}", documentUploadedTopic);
 
-            // Step 5: Return success response
+            metrics.incrementUploaded();
+            metrics.stopUploadTimer(timerSample);
+
             return DocumentUploadResponse.builder()
                     .documentId(saved.getId())
                     .fileName(saved.getFileName())
@@ -85,6 +99,7 @@ public class IngestionService {
 
         } catch (Exception e) {
             log.error("Failed to ingest document: {}", file.getOriginalFilename(), e);
+            metrics.stopUploadTimer(timerSample);
             throw new RuntimeException("Failed to process document: " + e.getMessage(), e);
         }
     }

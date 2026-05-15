@@ -52,6 +52,14 @@ public class EmbeddingService {
             log.info("Found {} chunks to embed for document: {}",
                     chunks.size(), event.getDocumentId());
 
+            // Fail if no chunks found
+            if (chunks.isEmpty()) {
+                log.warn("No chunks found for document: {}", event.getDocumentId());
+                document.setStatus("FAILED");
+                documentRepository.save(document);
+                return;  // Exit without throwing exception
+            }
+
             // Generate and save embedding for each chunk
             for (DocumentChunk chunk : chunks) {
                 float[] vector = mockEnabled

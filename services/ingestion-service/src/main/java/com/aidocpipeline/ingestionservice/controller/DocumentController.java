@@ -27,6 +27,7 @@ public class DocumentController {
      * Upload a document for processing.
      * Returns 202 Accepted immediately — processing happens asynchronously.
      */
+    @CrossOrigin(origins = "http://localhost:5173/")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DocumentUploadResponse> uploadDocument(
             @RequestParam("file") MultipartFile file,

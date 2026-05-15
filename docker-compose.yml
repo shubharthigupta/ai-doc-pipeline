@@ -1,18 +1,21 @@
+version: '3.9'
 services:
 
+  # PostgreSQL with pgvector — our main database
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16   # pre-built image with vector extension included
     container_name: docpipeline-postgres
     environment:
-      POSTGRES_DB: docpipeline
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: docpipeline       # name of the database to create
+      POSTGRES_USER: admin           # username
+      POSTGRES_PASSWORD: secret      # password (fine for local dev, never use in prod)
     ports:
-      - "5432:5432"
+      - "5432:5432"                  # host port : container port
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data          # persists data across restarts
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql  # runs on first start
 
+  # Apache Kafka — our message queue
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: docpipeline-kafka
@@ -28,6 +31,7 @@ services:
     ports:
       - "9092:9092"
 
+  # MinIO — local S3-compatible object storage
   minio:
     image: minio/minio:latest
     container_name: docpipeline-minio
@@ -36,16 +40,21 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9002:9000"
-      - "9003:9001"
+      - "9002:9000"   # S3 API port
+      - "9003:9001"   # Web UI port
+    volumes:
+      - minio_data:/data
 
+  # Jaeger — distributed tracing
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: docpipeline-jaeger
     ports:
-      - "16686:16686"   # Jaeger UI
-      - "4317:4317"     # OTLP gRPC receiver
+      - "16686:16686"   # Jaeger web UI
+      - "4317:4317"     # OTLP gRPC — Spring Boot sends traces here
+      - "4318:4318"     # OTLP HTTP    
 
+  # Prometheus — metrics collection
   prometheus:
     image: prom/prometheus:latest
     container_name: docpipeline-prometheus
@@ -54,13 +63,14 @@ services:
     ports:
       - "9090:9090"
 
+  # Grafana — metrics dashboards
   grafana:
     image: grafana/grafana:latest
     container_name: docpipeline-grafana
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
     ports:
-      - "3001:3000"
+      - "3000:3000"
     depends_on:
       - prometheus
 
